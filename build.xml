@@ -1,0 +1,227 @@
+<?xml version="1.0"?>
+
+<project name="Connect4" default="all">
+
+  <description>
+  ANT build file example (developed with Java 1.6, JUnit 1.4,
+  ANT 1.7).
+
+  Put source code in a src/ directory.
+
+  Put JUnit test code in a test/ directory.
+
+  Run
+   ant jar to compile and JAR src/ code into a JAR in lib/.
+   ant jarTests to compile and JAR test/ code into a JAR in lib/.
+   ant runTests to run tests and put HTML test reports in  build/test-html/
+  </description>
+
+  <!-- Base directory. -->
+  <dirname property="base.dir" file="${ant.file.Connect4}"/>
+	
+  <!-- Load ant.properties -->
+  <property file="${base.dir}/ant.properties"/>
+
+  <!-- Libraries -->
+  <property name="lib.dir" value="${base.dir}/lib"/>
+  <!-- Source directories. -->
+  <property name="src.dir" value="${base.dir}/src"/>
+  <property name="test.src.dir" value="${base.dir}/test"/>
+  <!-- Build directories. -->
+  <property name="build.dir" value="${base.dir}/build"/>
+  <property name="build.classes.dir" value="${build.dir}/bin"/> 
+  <property name="test.classes.dir" value="${build.dir}/test-bin"/> 
+  <property name="test.report.xml.dir" 
+            value="${build.dir}/test-xml"/> 
+  <property name="test.report.html.dir" 
+            value="${build.dir}/test-html"/> 
+  <property name="doc.dir" 
+	        value="${build.dir}/doc"/> 
+  <!-- Build control. -->
+  <property name="java.debug" value="on"/>
+  <property name="java.deprecation" value="off"/>
+  <property name="compiler.jvmarg" value=""/>
+  <!-- JAR names -->
+  <property name="jar.name" value="Connect4.jar"/>
+  <property name="test.jar.name" value="Connect4-test.jar"/>
+  <!-- CLASSPATH -->
+  <path id="classpath">
+  	<pathelement path="${base.dir}/junit-4.11.jar"/>
+    <pathelement path="${build.classes.dir}"/>
+    <pathelement path="${test.classes.dir}"/>
+    <fileset dir="${lib.dir}">
+      <include name="**/*.jar"/>
+    </fileset>
+    <fileset dir=".">
+      <include name="**/*.jar"/>
+    </fileset>
+  </path>
+
+  <!--
+    Make build directory.
+  -->
+  <target name="init" description="Make build directory">
+    <mkdir dir="${build.dir}"/>
+    <mkdir dir="${build.classes.dir}"/>
+    <mkdir dir="${test.classes.dir}"/>
+    <mkdir dir="${lib.dir}"/>
+  </target>
+
+  <!--
+    Remove build directory.
+  -->
+  <target name="clean" description="Remove build directory">
+    <delete dir="${build.dir}"/>
+    <delete dir="${lib.dir}"/>
+  </target>
+
+  <!--
+    Compile code.
+  -->
+  <target name="compile" description="Compile code" depends="init">
+    <mkdir dir="${build.classes.dir}"/>
+    <javac includeantruntime="false"
+  		   srcdir="${src.dir}" 
+           destdir="${build.classes.dir}"
+           debug="${java.debug}"
+           deprecation="${java.deprecation}"
+           classpathref="classpath">
+      <include name="**/*.java"/>
+      <compilerarg line="${compiler.jvmarg}"/>
+    </javac>
+  </target>
+
+  <!--
+    JAR classes.
+  -->
+
+	
+  <target name="jar" description="JAR classes"
+          depends="compile, createManifest">
+    <mkdir dir="${lib.dir}"/>
+    <!-- 
+      Make a binary directory if none is there. The skip below
+      avoids empty JARs anyway.
+    -->
+    <tstamp>
+      <format property="build.time" pattern="EEE d MMMM yyyy HH:mm"/>
+    </tstamp>
+    <jar destfile="${lib.dir}/${jar.name}" 
+         basedir="${build.classes.dir}"
+         manifest="${build.dir}/MANIFEST.MF"
+         whenmanifestonly="skip"/>
+  </target>
+
+  <!--
+    Compile tests. 
+  -->
+  <target name="compileTests" description="Compile tests" depends="jar">
+      <mkdir dir="${test.classes.dir}"/>
+      <javac srcdir="${test.src.dir}" 
+             destdir="${test.classes.dir}"
+             debug="${java.debug}"
+             deprecation="${java.deprecation}"
+             classpathref="classpath">
+        <include name="**/*.java"/>
+        <compilerarg line="${compiler.jvmarg}"/>
+      </javac>
+  </target>
+
+	
+  <!-- Generate javadocs for current project into ${doc.dir} -->
+  <target name="doc" depends="init" description="generate documentation">
+	<javadoc sourcepath="${src.dir}" destdir="${doc.dir}"/>
+  </target>
+	
+	
+	
+	
+  <!--
+    JAR test classes.
+  -->
+  <target name="jarTests" 
+          description="JAR test classes"
+          depends="compileTests, createManifest">
+    <mkdir dir="${lib.dir}"/>
+    <!-- 
+      Make a binary directory if none is there. The skip below
+      avoids empty JARs anyway.
+    -->
+    <tstamp>
+      <format property="build.time" pattern="EEE d MMMM yyyy HH:mm"/>
+    </tstamp>
+    <jar destfile="${lib.dir}/${test.jar.name}" 
+         basedir="${test.classes.dir}"
+         manifest="${build.dir}/MANIFEST.MF"
+         whenmanifestonly="skip"/>
+  </target>
+
+  <!--
+    Run tests.
+  -->
+  <target name="runTests" 
+          description="Run tests"
+          depends="jarTests">
+    <sequential>
+      <mkdir dir="${test.report.xml.dir}"/>
+      <mkdir dir="${test.report.html.dir}"/>
+      <property name="test.filter" value="**/*Test*.java"/>
+      <junit printsummary="yes" 
+             haltonfailure="no">
+        <classpath>
+          <path refid="classpath"/>
+        </classpath>
+        <formatter type="xml"/>
+        <batchtest fork="yes" 
+                   todir="${test.report.xml.dir}">
+          <fileset dir="${test.src.dir}">
+            <include name="${test.filter}"/>
+            <include name="**/*Test.java"/>
+          </fileset>
+        </batchtest>
+      </junit>
+    </sequential>
+    <antcall target="testreport">
+      <param name="base.dir" value="${base.dir}"/>
+      <param name="xml.dir" value="${test.report.xml.dir}"/>
+      <param name="html.dir" value="${test.report.html.dir}"/>
+    </antcall>
+  </target>
+
+  <!-- Create JAR manifest -->
+  <target name="createManifest" 
+          description="Create JAR manifest">
+    <mkdir dir="${build.dir}"/>
+    <tstamp>
+      <format property="build.time" pattern="EEE d MMMM yyyy HH:mm"/>
+    </tstamp>
+    <manifest file="${build.dir}/MANIFEST.MF">
+      <attribute name="Built-By" value="${user.name}"/>
+      <attribute name="Built-At" value="${build.time}"/>
+      <attribute name="Main-Class" value="connect.Connect4" />
+    </manifest>
+  </target>
+
+  <!--
+    Convert ANT junit XML reports into HTML.
+  -->
+  <target name="testreport"
+          description="Convert ANT junit XML reports into HTML">
+    <mkdir dir="${html.dir}"/>
+    <!-- Destination of aggregated XML report -->
+    <junitreport todir="${xml.dir}">
+      <fileset dir="${xml.dir}">
+        <include name="TEST-*.xml"/>
+      </fileset>
+      <report todir="${html.dir}"/>
+    </junitreport>
+  </target>
+
+  <!--
+    Clean, compile and JAR everything and run tests.
+  -->
+  <target name="all" description="Clean, compile, javaDoc, JAR and run tests"
+          depends="clean, jar, jarTests, runTests, doc"/>
+
+</project>
+
